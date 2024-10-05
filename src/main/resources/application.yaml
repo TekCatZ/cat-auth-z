@@ -1,0 +1,5 @@
+spring:
+  application:
+    name: authZ
+  datasource:
+    url: "jdbc:h2:mem:clientdb"

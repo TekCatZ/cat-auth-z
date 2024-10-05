@@ -1,0 +1,289 @@
+openapi: 3.0.0
+info:
+  title: OAuth 2.0 Authorization Server API
+  version: 1.2.0
+  description: API specification for OAuth 2.0 authorization server supporting all flows, PKCE, and scope management
+
+paths:
+  /api/v1/clients:
+    post:
+      summary: Register new OAuth client
+      tags: [Client Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreateRequest'
+      responses:
+        201:
+          description: Client registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientCreateResponse'
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: Internal Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/oauth/authorize:
+    get:
+      summary: Request authorization for a user with the client
+      tags: [AuthZ]
+      parameters:
+        - $ref: '#/components/parameters/ClientIdParam'
+        - $ref: '#/components/parameters/RedirectUri'
+        - $ref: '#/components/parameters/ResponseType'
+        - $ref: '#/components/parameters/Scope'
+        - $ref: '#/components/parameters/State'
+        - $ref: '#/components/parameters/CodeChallenge'
+        - $ref: '#/components/parameters/CodeChallengeMethod'
+      responses:
+        302:
+          description: Redirect to authorization endpoint
+          headers:
+            Location:
+              description: URI where the client can refresh the expired token.
+              schema:
+                type: string
+                format: uri  # Optional - use if the Location header is an absolute URI
+              example:
+                authorization_code:
+                  value: https://client.example.com/callback?code=SplxlOBeZQQYbYS6WxSbIA&state=xyz
+                  description: Authorization Code flow response
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        500:
+          description: Internal Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        
+  /api/v1/oauth/token:
+    post:
+      summary: Token endpoint
+      tags: [Token]
+      description: Exchange various grants for access tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/AuthorizationCodeRequest'
+                - $ref: '#/components/schemas/ClientCredentialsRequest'
+                - $ref: '#/components/schemas/DeviceCodeRequest'
+                - $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    ClientIdParam:
+      name: client_id
+      in: query
+      required: true
+      schema:
+        type: string
+    RedirectUri:
+      name: redirect_uri
+      in: query
+      required: true
+      schema:
+        type: string
+    ResponseType:
+      name: response_type
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [code]
+    Scope:
+      name: scope
+      in: query
+      schema:
+        type: string
+    State:
+      name: state
+      in: query
+      schema:
+        type: string
+    CodeChallenge:
+      name: code_challenge
+      in: query
+      schema:
+        type: string
+    CodeChallengeMethod:
+      name: code_challenge_method
+      in: query
+      schema:
+        type: string
+        enum: [S256]
+  schemas:
+    ClientCreateRequest:
+      type: object
+      properties:
+        client_name:
+          type: string
+          example: "test client"
+        grant_types:
+          type: array
+          items:
+            type: string
+            enum: [authorization_code, pcke, client_credentials, refresh_token]
+          example: "implicit"
+        default_scopes:
+          type: array
+          items:
+            type: string
+          description: Default scopes for this client
+          example: ["web:blogs:read", "web:profile:write"]
+      required:
+        - client_name
+        - grant_types
+        - default_scopes
+
+    ClientCreateResponse:
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+        allowed_scopes:
+          type: array
+          items:
+            type: string
+        default_scopes:
+          type: array
+          items:
+            type: string
+
+    AuthorizationCodeRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum: [authorization_code]
+        code:
+          type: string
+        redirect_uri:
+          type: string
+          format: uri
+        client_id:
+          type: string
+        code_verifier:
+          type: string
+      required:
+        - grant_type
+        - code
+        - redirect_uri
+        - client_id
+
+    ClientCredentialsRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum: [client_credentials]
+        scope:
+          type: string
+      required:
+        - grant_type
+
+    DeviceCodeRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum: [urn:ietf:params:oauth:grant-type:device_code]
+        device_code:
+          type: string
+        client_id:
+          type: string
+      required:
+        - grant_type
+        - device_code
+        - client_id
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        grant_type:
+          type: string
+          enum: [refresh_token]
+        refresh_token:
+          type: string
+        scope:
+          type: string
+      required:
+        - grant_type
+        - refresh_token
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+        refresh_token:
+          type: string
+        scope:
+          type: string
+      required:
+        - access_token
+        - token_type
+        - expires_in
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error_id:
+          type: string
+        error_message:
+          type: string
+        error_fields:
+          type: array
+          items:
+            type: string
+  securitySchemes:
+    clientAuth:
+      type: http
+      scheme: basic
+    bearerAuth:
+      type: http
+      scheme: bearer

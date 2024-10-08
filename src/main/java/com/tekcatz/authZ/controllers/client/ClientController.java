@@ -2,21 +2,31 @@ package com.tekcatz.authZ.controllers.client;
 
 import com.tekcatz.authZ.controllers.client.dto.ClientCreateRequest;
 import com.tekcatz.authZ.controllers.client.dto.ClientCreateResponse;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.tekcatz.authZ.services.client.ClientService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/client")
+@RequiredArgsConstructor
 public class ClientController {
+    private final ClientService clientService;
+
+    @GetMapping("/")
+    public String index() {
+        return "Hello World!";
+    }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public ClientCreateResponse create(
-            @Valid ClientCreateRequest request
+            @Valid @RequestBody
+            ClientCreateRequest request
             ) {
-
+        clientService.createClient(request);
         return null;
     }
 }

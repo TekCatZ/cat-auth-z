@@ -3,3 +3,13 @@ spring:
     name: authZ
   datasource:
     url: "jdbc:h2:mem:clientdb"
+    username: "sa"
+    password: "123456"
+  ldap:
+    embedded:
+      port: 8389
+      ldif: classpath:ldap-server.ldif
+      base-dn: dc=springframework,dc=org
+logging:
+  level:
+    org.springframework.security: DEBUG
